@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Admin login · CD3 Leaderboard Hub{% endblock %}
+{% block body %}
+<div class="fixed top-4 right-4">
+  <button onclick="toggleTheme()" title="Toggle light / dark" aria-label="Toggle light and dark theme" class="btn-g rounded-full p-2">
+    <span class="icon-sun hidden"><i data-lucide="sun" class="w-4 h-4"></i></span>
+    <span class="icon-moon"><i data-lucide="moon" class="w-4 h-4"></i></span>
+  </button>
+</div>
+<main class="min-h-[100dvh] grid place-items-center px-4 py-10">
+  <div class="w-full max-w-sm rise">
+    <div class="text-center mb-6">
+      <div class="tile w-13 h-13 rounded-2xl mx-auto grid place-items-center mb-4 p-3.5">
+        <i data-lucide="shield-check" class="w-6 h-6"></i>
+      </div>
+      <h1 class="display font-bold text-[22px]">Admin access</h1>
+      <p class="mono text-[11.5px] dim mt-1">events · resets · history · exports</p>
+    </div>
+    <form method="POST" class="panel rounded-2xl p-6">
+      {% if error %}<p class="mono text-[12px] err-box rounded-xl px-3.5 py-2.5 mb-4 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-4 h-4 shrink-0"></i>{{ error }}</p>{% endif %}
+      <label for="pw" class="mono block text-[10.5px] uppercase tracking-[0.14em] faint mb-1.5">Password</label>
+      <input id="pw" name="password" type="password" autofocus placeholder="password" class="field mono w-full rounded-xl px-3.5 py-2.5 text-[13px]">
+      <p class="mono text-[10.5px] faint mt-2">fresh install default: <span class="dim">admin123</span></p>
+      <button class="btn-p mono w-full rounded-xl py-2.5 text-[12.5px] font-semibold mt-4 flex items-center justify-center gap-1.5"><i data-lucide="unlock" class="w-4 h-4"></i>unlock admin</button>
+      <a href="/" class="mono text-[12px] dim hover:underline mt-4 flex items-center justify-center gap-1.5"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>back to boards</a>
+    </form>
+  </div>
+</main>
+{% endblock %}

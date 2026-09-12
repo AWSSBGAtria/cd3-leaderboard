@@ -1,0 +1,24 @@
+services:
+  leaderboard:
+    build: .
+    image: cd3-leaderboard:latest
+    container_name: cd3-leaderboard
+    # Host port 80 so the board is just http://<ec2-public-ip> (open port 80 in the security group).
+    # Prefer 5000? Change to "5000:5000" and open port 5000 instead.
+    ports:
+      - "80:5000"
+    environment:
+      PORT: 5000
+      DB_PATH: /app/data/leaderboard.db
+      # Set once on the EC2 host:  export SECRET_KEY=$(openssl rand -hex 32)
+      # Changing it later logs everyone out of admin (sessions invalidate).
+      SECRET_KEY: ${SECRET_KEY:-dev-only-change-me}
+      # Only used on very first boot to create the admin password. Change it in Settings after.
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+    volumes:
+      # SQLite lives here, so redeploys and rebuilds never wipe the boards.
+      - leaderboard-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  leaderboard-data:

@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block title %}CD3 Leaderboard Hub{% endblock %}
+{% block head %}
+<style>
+  .podium-bar-1 { background: var(--gold-row); border: 1px solid var(--border); border-bottom: none; }
+  .podium-bar-n { background: var(--surface-2); border: 1px solid var(--border-soft); border-bottom: none; }
+</style>
+{% endblock %}
+{% block body %}
+<!-- Single control bar: brand, filter, refresh, theme. -->
+<header class="sticky top-0 z-40 border-b" style="border-color:var(--border);background:var(--header-bg);backdrop-filter:blur(14px);">
+  <div class="max-w-[1760px] mx-auto px-4 py-3 flex items-center gap-2.5 flex-wrap">
+    <div class="tile w-9 h-9 rounded-[10px] grid place-items-center shrink-0">
+      <i data-lucide="trophy" class="w-[18px] h-[18px]"></i>
+    </div>
+    <p class="display font-bold tracking-tight text-[15px] hidden sm:block">CD3<span class="accent">/boards</span></p>
+    <span class="mono hidden md:inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full chip">
+      <span class="w-1.5 h-1.5 rounded-full live-dot" style="background:var(--ok);"></span>LIVE
+    </span>
+    <div class="flex-1 min-w-2"></div>
+    <div class="relative order-5 sm:order-none w-full sm:w-auto sm:min-w-[240px] sm:max-w-[300px] sm:flex-1">
+      <i data-lucide="filter" class="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 faint pointer-events-none"></i>
+      <select id="eventFilter" onchange="onFilterChange()" class="field mono w-full appearance-none rounded-full pl-9 pr-8 py-2 text-[12.5px]">
+        <option value="all">all boards / top 10</option>
+      </select>
+      <i data-lucide="chevron-down" class="w-3.5 h-3.5 absolute right-3.5 top-1/2 -translate-y-1/2 faint pointer-events-none"></i>
+    </div>
+    <div id="singleSearchWrap" class="relative hidden order-5 sm:order-none w-full sm:w-auto sm:flex-1 sm:max-w-[220px]">
+      <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 faint pointer-events-none"></i>
+      <input id="searchInput" oninput="onSearch()" placeholder="search player" class="field mono w-full rounded-full pl-9 pr-4 py-2 text-[12.5px]">
+    </div>
+    <button onclick="refresh(true)" title="Refresh boards" aria-label="Refresh boards" class="btn-g rounded-full p-2">
+      <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+    </button>
+    <button onclick="toggleTheme()" title="Toggle light / dark" aria-label="Toggle light and dark theme" class="btn-g rounded-full p-2">
+      <span class="icon-sun hidden"><i data-lucide="sun" class="w-4 h-4"></i></span>
+      <span class="icon-moon"><i data-lucide="moon" class="w-4 h-4"></i></span>
+    </button>
+  </div>
+</header>
+
+<main class="max-w-[1760px] mx-auto px-4 pb-20">
+  <p id="boardHint" class="mono text-[11px] faint mt-5 tracking-wide"></p>
+
+  <section id="unifiedGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-3.5 mt-3"></section>
+
+  <section id="singleView" class="hidden mt-3">
+    <div class="panel rounded-2xl overflow-hidden">
+      <div id="singleHead" class="p-5 flex items-center gap-3.5"></div>
+      <div id="podiumWrap" class="px-4 md:px-6 pt-4 hidden"></div>
+      <div id="singleRows"></div>
+      <div class="p-3.5 flex items-center justify-between gap-2 flex-wrap">
+        <p id="pageInfo" class="mono text-[11px] faint"></p>
+        <div class="flex items-center gap-1.5">
+          <button id="prevBtn" onclick="movePage(-1)" class="btn-g mono rounded-full px-3.5 py-1.5 text-[12px] flex items-center gap-1"><i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>prev</button>
+          <div id="pageNums" class="hidden sm:flex items-center gap-1"></div>
+          <button id="nextBtn" onclick="movePage(1)" class="btn-g mono rounded-full px-3.5 py-1.5 text-[12px] flex items-center gap-1">next<i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="emptyState" class="hidden mt-3 panel rounded-2xl p-12 text-center">
+    <div class="tile w-12 h-12 rounded-xl mx-auto grid place-items-center mb-4">
+      <i data-lucide="trophy" class="w-6 h-6"></i>
+    </div>
+    <h2 class="display font-bold text-xl">No boards yet</h2>
+    <p class="text-sm dim mt-1.5">Scores will appear here once the event begins.</p>
+  </section>
+</main>
+
+<footer class="py-5 text-center mono text-[11px] faint">
+  cd3 leaderboard hub <span class="mx-1">·</span> aws student builder group <span class="mx-1">·</span> refresh 15s
+</footer>
+
+<div id="toasts" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 items-end"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let EVENTS = [], BOARDS = [], curEvent = 'all', curPage = 1, curPages = 1, searchT = null;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtScore = s => Number.isInteger(+s) ? (+s).toLocaleString('en-IN') : (+s).toFixed(1);
+const evMetrics = ev => (ev.metrics && ev.metrics.length ? ev.metrics : [{id:0,label:ev.score_label||'Score',unit:ev.unit||'pts',sort_dir:ev.sort_dir||'DESC'}]);
+const mval = (r, mid) => { const v = r.values ? r.values[String(mid)] : undefined; return (v===undefined||v===null) ? r.score : v; };
+const dirWord = d => d==='ASC' ? 'low wins' : 'high wins';
+const metaText = ev => evMetrics(ev).map(m=>`${m.label} · ${m.unit} · ${dirWord(m.sort_dir)}`).join(' + ');
+const secondaryText = (ev, r) => evMetrics(ev).slice(1).map(m=>`${fmtScore(mval(r,m.id))} ${m.unit}`).join(' · ');
+
+function toast(msg, icon='check') {
+  const el = document.createElement('div');
+  el.className = 'panel rounded-xl px-4 py-2.5 mono text-[12.5px] flex items-center gap-2.5 rise';
+  el.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4 accent"></i><span>${esc(msg)}</span>`;
+  $('toasts').appendChild(el); lucide.createIcons();
+  setTimeout(() => { el.style.opacity='0'; el.style.transition='.4s'; setTimeout(()=>el.remove(), 400); }, 3000);
+}
+
+function rankBadge(i, compact=false){
+  const base = `rounded-full grid place-items-center shrink-0 mono font-bold ${compact ? 'w-6 h-6 text-[11px]' : 'w-7 h-7 text-[13px]'}`;
+  if (i===1) return `<span class="rank-1 ${base}">1</span>`;
+  if (i===2) return `<span class="rank-2 ${base}">2</span>`;
+  if (i===3) return `<span class="rank-3 ${base}">3</span>`;
+  return `<span class="rank-n ${base} ${compact ? 'text-[10px] font-medium' : 'text-[11px] font-medium'}">${i}</span>`;
+}
+
+async function refresh(manual=false){
+  const [u, e] = await Promise.all([
+    fetch('/api/unified?limit=10').then(r=>r.json()),
+    fetch('/api/events').then(r=>r.json())
+  ]);
+  EVENTS = e.events || [];
+  BOARDS = u.boards || [];
+  const sel = $('eventFilter'), keep = sel.value;
+  sel.innerHTML = `<option value="all">all boards / top 10</option>` + EVENTS.map(e=>`<option value="${e.id}">${esc(e.name.toLowerCase())}</option>`).join('');
+  sel.value = [...sel.options].some(o=>o.value===String(keep)) ? keep : 'all';
+  curEvent = sel.value;
+  render();
+  if (manual) toast('boards refreshed', 'refresh-cw');
+}
+
+function render(){
+  const has = EVENTS.length > 0;
+  $('emptyState').classList.toggle('hidden', has);
+  $('unifiedGrid').classList.toggle('hidden', curEvent!=='all' || !has);
+  $('singleView').classList.toggle('hidden', curEvent==='all' || !has);
+  $('singleSearchWrap').classList.toggle('hidden', curEvent==='all');
+  if (!has) { $('boardHint').textContent = ''; return; }
+  if (curEvent==='all'){
+    $('boardHint').textContent = `${BOARDS.length} boards · top 10 each`;
+    $('unifiedGrid').innerHTML = BOARDS.map(({event:ev, top}) => boardCard(ev, top)).join('');
+  } else {
+    loadSingle();
+  }
+  lucide.createIcons();
+}
+
+function boardCard(ev, top){
+  const ms = evMetrics(ev);
+  return `<article class="panel panel-hover rounded-2xl overflow-hidden rise flex flex-col cursor-pointer" onclick="jumpTo(${ev.id})" onkeydown="if(event.key==='Enter')jumpTo(${ev.id})" tabindex="0" role="link" aria-label="${esc(ev.name)}, open full board" title="Open full board">
+    <div class="p-3.5 pb-2.5 flex items-center gap-2.5">
+      <div class="tile w-8 h-8 rounded-lg grid place-items-center shrink-0">
+        <i data-lucide="${esc(ev.icon||'trophy')}" class="w-4 h-4"></i>
+      </div>
+      <div class="min-w-0 flex-1">
+        <h3 class="display font-semibold text-[13.5px] leading-tight truncate">${esc(ev.name)}</h3>
+        <p class="mono text-[10px] faint mt-0.5 tracking-wide truncate">${esc(metaText(ev))}</p>
+      </div>
+      <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 faint shrink-0"></i>
+    </div>
+    <div class="px-1.5 pb-1.5 flex-1">
+      ${top.length ? top.map((r,i)=>{
+        const sec = ms.length>1 ? secondaryText(ev, r) : '';
+        return `
+        <div class="rowline flex items-center gap-2 px-1.5 py-[7px] ${i===0?'gold-row rounded-md':''}">
+          ${rankBadge(i+1, true)}
+          <div class="flex-1 min-w-0">
+            <p class="text-[12.5px] font-medium truncate">${esc(r.player_name)}</p>
+            ${sec?`<p class="mono text-[9.5px] faint truncate">${esc(sec)}</p>`:''}
+          </div>
+          <p class="mono font-bold text-[12.5px] ${i===0?'accent':''} whitespace-nowrap">${fmtScore(mval(r,ms[0].id))}<span class="text-[9.5px] font-medium faint"> ${esc(ms[0].unit)}</span></p>
+        </div>`;}).join('') : `
+        <div class="text-center py-6 text-[12px] faint flex flex-col items-center gap-1.5">
+          <i data-lucide="ghost" class="w-4 h-4"></i>no scores yet
+        </div>`}
+    </div>
+  </article>`;
+}
+
+function jumpTo(id){ $('eventFilter').value = String(id); onFilterChange(); window.scrollTo({top:0, behavior:'smooth'}); }
+function onFilterChange(){ curEvent = $('eventFilter').value; curPage = 1; $('searchInput').value=''; render(); }
+
+function podiumSlot(r, rank, h, first, ev){
+  if (!r) return `
+    <div class="flex flex-col items-center justify-end min-w-0">
+      <span class="block h-4 mb-1.5"></span>
+      <p class="mono text-[10.5px] faint">vacant</p>
+      <p class="mono text-[10.5px] faint mt-0.5">-</p>
+      <div class="podium-bar-n w-full rounded-t-xl mt-2 ${h} grid place-items-center" style="border-style:dashed;">
+        <span class="mono text-lg faint">${rank}</span>
+      </div>
+    </div>`;
+  const ms = evMetrics(ev);
+  const sec = ms.length>1 ? secondaryText(ev, r) : '';
+  return `
+    <div class="flex flex-col items-center justify-end min-w-0">
+      ${first ? `<i data-lucide="crown" class="w-4 h-4 accent mb-1.5"></i>` : `<span class="block h-4 mb-1.5"></span>`}
+      <p class="text-[12px] sm:text-[13.5px] font-semibold truncate max-w-full px-1" title="${esc(r.player_name)}">${esc(r.player_name)}</p>
+      <p class="mono font-bold text-[13px] sm:text-[15px] ${first?'accent':''} mt-0.5 whitespace-nowrap">${fmtScore(mval(r,ms[0].id))}<span class="text-[9.5px] font-medium faint"> ${esc(ms[0].unit)}</span></p>
+      ${sec?`<p class="mono text-[9.5px] faint whitespace-nowrap">${esc(sec)}</p>`:''}
+      <div class="${first?'podium-bar-1':'podium-bar-n'} w-full rounded-t-xl mt-2 ${h} grid place-items-center">
+        <span class="mono font-bold ${first?'text-xl accent':'text-lg faint'}">${rank}</span>
+      </div>
+    </div>`;
+}
+
+function podiumHTML(ev, top3){
+  return `
+    <div class="grid grid-cols-3 gap-2 sm:gap-3 items-end">
+      ${podiumSlot(top3[1], 2, 'h-16 sm:h-20', false, ev)}
+      ${podiumSlot(top3[0], 1, 'h-24 sm:h-32', true, ev)}
+      ${podiumSlot(top3[2], 3, 'h-12 sm:h-16', false, ev)}
+    </div>`;
+}
+
+async function loadSingle(){
+  const q = $('searchInput').value.trim();
+  const qs = `event_id=${curEvent}&q=${encodeURIComponent(q)}`;
+  const [r, t] = await Promise.all([
+    fetch(`/api/leaderboard?${qs}&page=${curPage}&per_page=10`).then(r=>r.json()),
+    fetch(`/api/leaderboard?${qs}&page=1&per_page=3`).then(r=>r.json())
+  ]);
+  if (!r.ok){ toast('board not found','alert-triangle'); return; }
+  const ev = r.event; curPages = r.pages;
+  const ms = evMetrics(ev);
+  const prim = ms[0];
+  $('boardHint').textContent = `${r.total} entries · p${r.page}/${r.pages} · ${prim.sort_dir==='ASC'?'low':'high'} ${prim.label.toLowerCase()} first`;
+  $('singleHead').innerHTML = `
+    <div class="tile w-11 h-11 rounded-[10px] grid place-items-center shrink-0">
+      <i data-lucide="${esc(ev.icon||'trophy')}" class="w-5 h-5"></i>
+    </div>
+    <div class="min-w-0">
+      <h2 class="display font-bold text-lg leading-tight">${esc(ev.name)}</h2>
+      <p class="mono text-[11px] faint mt-0.5 truncate">${esc(ev.description||metaText(ev))}</p>
+    </div>
+    <p class="mono ml-auto text-[11px] faint shrink-0">${r.total} entries</p>`;
+  // Podium: overall top 3 for the current filter. Table: everything below rank 3.
+  const top3 = (t.ok ? t.rows : []).slice(0, 3);
+  const pw = $('podiumWrap');
+  if (r.total > 0){
+    pw.classList.remove('hidden');
+    pw.innerHTML = podiumHTML(ev, top3) + `<div class="mt-0" style="border-top:1px solid var(--border-soft);"></div>`;
+  } else {
+    pw.classList.add('hidden'); pw.innerHTML = '';
+  }
+  const startRank = (r.page-1)*10;
+  const rest = r.rows
+    .map((row, i) => ({ row, rank: startRank + i + 1 }))
+    .filter(o => o.rank > 3);
+  const cols = `2.25rem minmax(0,1fr)${' auto'.repeat(ms.length)}`;
+  const head = `
+    <div class="grid mono text-[10px] uppercase faint px-4 md:px-6 py-2 mt-1 gap-2.5" style="grid-template-columns:${cols};letter-spacing:0.14em;">
+      <span>rk</span><span>player</span>${ms.map(m=>`<span class="text-right">${esc(m.label.toLowerCase())}</span>`).join('')}
+    </div>`;
+  $('singleRows').innerHTML = rest.length ? head + rest.map(({row, rank})=>`
+    <div class="rowline grid items-center gap-2.5 px-4 md:px-6 py-2.5" style="grid-template-columns:${cols};">
+      ${rankBadge(rank, true)}
+      <div class="min-w-0">
+        <p class="text-[13.5px] font-medium truncate">${esc(row.player_name)}</p>
+        <p class="mono text-[10.5px] faint">${new Date(row.created_at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})}</p>
+      </div>
+      ${ms.map((m,mi)=>`<p class="mono font-bold ${mi===0?'text-[14px]':'text-[13px] font-semibold dim'} text-right whitespace-nowrap">${fmtScore(mval(row,m.id))}<span class="text-[10px] font-medium faint"> ${esc(m.unit)}</span></p>`).join('')}
+    </div>`).join('') :
+    (r.total === 0
+      ? `<div class="text-center py-10 text-[13px] faint flex flex-col items-center gap-2"><i data-lucide="ghost" class="w-5 h-5"></i>${q ? 'no matches' : 'no scores yet'}</div>`
+      : `<p class="mono text-[11px] faint text-center py-6">the full standings fit on the podium above</p>`);
+  const shown = rest.map(o => o.rank);
+  $('pageInfo').textContent = shown.length ? `ranks ${shown[0]}-${shown[shown.length-1]} of ${r.total}` : `${r.total} total`;
+  $('prevBtn').disabled = r.page<=1; $('nextBtn').disabled = r.page>=r.pages;
+  const win=[...new Set([1,2,r.page-1,r.page,r.page+1,r.pages-1,r.pages])].filter(p=>p>=1&&p<=r.pages).sort((a,b)=>a-b);
+  $('pageNums').innerHTML = win.map(p=>`<button onclick="gotoPage(${p})" class="mono w-7 h-7 rounded-full text-[11px] ${p===r.page?'btn-p font-bold':'faint hover:underline'}">${p}</button>`).join('');
+  lucide.createIcons();
+}
+function movePage(d){ const n = Math.min(curPages, Math.max(1, curPage+d)); if(n!==curPage){curPage=n; loadSingle();} }
+function gotoPage(p){ curPage=p; loadSingle(); }
+function onSearch(){ clearTimeout(searchT); searchT=setTimeout(()=>{curPage=1; loadSingle();},280); }
+
+refresh();
+setInterval(refresh, 15000);
+</script>
+{% endblock %}

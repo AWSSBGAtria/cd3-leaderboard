@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}CD3 Leaderboard Hub{% endblock %}</title>
+<script>
+/* Theme first: persisted choice wins, otherwise OS, otherwise dark (event-hall default). */
+try {
+  var t = localStorage.getItem('cd3-theme');
+  if (!t) t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.dataset.theme = t;
+} catch (e) { document.documentElement.dataset.theme = 'dark'; }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ── Semantic tokens. One accent (amber). No pure black/white. ── */
+  :root, [data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #09090b;
+    --surface: #111114;
+    --surface-2: #17171c;
+    --field: #0c0c0f;
+    --border: rgba(255,255,255,.09);
+    --border-soft: rgba(255,255,255,.055);
+    --text: #f4f4f5;
+    --dim: #a8a8b3;
+    --faint: #63636d;
+    --accent: #fbbf24;
+    --accent-strong: #f59e0b;
+    --accent-soft: rgba(251,191,36,.12);
+    --btn-bg: #fbbf24;
+    --btn-text: #09090b;
+    --gold-row: rgba(251,191,36,.07);
+    --danger: #fb7185;
+    --danger-soft: rgba(251,113,133,.1);
+    --ok: #34d399;
+    --ok-soft: rgba(52,211,153,.12);
+    --info: #7dd3fc;
+    --info-soft: rgba(125,211,252,.1);
+    --shadow: none;
+    --header-bg: rgba(9,9,11,.86);
+  }
+  [data-theme="light"] {
+    color-scheme: light;
+    --bg: #f1f1f4;
+    --surface: #fdfdfd;
+    --surface-2: #ececf0;
+    --field: #fdfdfd;
+    --border: #dcdce2;
+    --border-soft: #e9e9ee;
+    --text: #141417;
+    --dim: #4c4c56;
+    --faint: #8e8e99;
+    --accent: #b45309;
+    --accent-strong: #92400e;
+    --accent-soft: rgba(180,83,9,.09);
+    --btn-bg: #141417;
+    --btn-text: #fafafa;
+    --gold-row: #fdf3d7;
+    --danger: #be123c;
+    --danger-soft: rgba(190,18,60,.07);
+    --ok: #047857;
+    --ok-soft: rgba(4,120,87,.09);
+    --info: #0369a1;
+    --info-soft: rgba(3,105,161,.08);
+    --shadow: 0 1px 2px rgba(20,20,23,.06);
+    --header-bg: rgba(241,241,244,.86);
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); transition: background .25s ease, color .25s ease; }
+  .display { font-family: 'Space Grotesk', sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-feature-settings: 'tnum'; }
+  .panel { background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); transition: background .25s ease, border-color .25s ease; }
+  .panel-hover:hover { border-color: var(--accent); }
+  .dim { color: var(--dim); } .faint { color: var(--faint); }
+  .accent { color: var(--accent); }
+  .tile { background: var(--accent-soft); border: 1px solid var(--border); color: var(--accent); }
+  .chip { background: var(--surface-2); border: 1px solid var(--border); color: var(--dim); }
+  .field { background: var(--field); border: 1px solid var(--border); color: var(--text); transition: border-color .15s ease; }
+  .field:focus { outline: none; border-color: var(--accent); }
+  .field::placeholder { color: var(--faint); }
+  select.field option { background: var(--surface); color: var(--text); }
+  .btn-p { background: var(--btn-bg); color: var(--btn-text); transition: transform .15s ease, opacity .15s ease; }
+  .btn-p:hover { transform: translateY(-1px); }
+  .btn-p:active { transform: translateY(1px) scale(.98); }
+  .btn-p:disabled { opacity: .55; transform: none; cursor: wait; }
+  .btn-g { border: 1px solid var(--border); color: var(--text); background: transparent; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+  .btn-g:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .btn-g:active { transform: scale(.98); }
+  .btn-g:disabled { opacity: .4; cursor: default; transform: none; }
+  .btn-danger { background: var(--danger-soft); border: 1px solid var(--border); color: var(--danger); transition: background .15s ease; }
+  .btn-danger:hover { background: var(--danger-soft); border-color: var(--danger); }
+  .rowline { border-bottom: 1px solid var(--border-soft); }
+  .rowline:last-child { border-bottom: none; }
+  .gold-row { background: var(--gold-row); }
+  .rank-1 { background: linear-gradient(135deg, #fde68a, #f59e0b); color: #09090b; }
+  .rank-2 { background: #d7d7de; color: #141417; }
+  [data-theme="dark"] .rank-2 { background: #e4e4e7; color: #09090b; }
+  .rank-3 { background: linear-gradient(135deg, #fdba74, #b45309); color: #141417; }
+  .rank-n { background: var(--surface-2); border: 1px solid var(--border-soft); color: var(--dim); }
+  .tabbtn { color: var(--dim); }
+  .tabbtn.on { background: var(--btn-bg); color: var(--btn-text); font-weight: 600; }
+  .err { color: var(--danger); }
+  .err-box { background: var(--danger-soft); border: 1px solid var(--border); color: var(--danger); }
+  .ok-box { background: var(--ok-soft); border: 1px solid var(--border); color: var(--ok); }
+  .info-box { background: var(--accent-soft); border: 1px solid var(--border); color: var(--text); }
+  @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+  .live-dot { animation: pulse-dot 1.6s ease-in-out infinite; }
+  @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  .rise { animation: rise .45s cubic-bezier(.16,1,.3,1) both; }
+  dialog::backdrop { background: rgba(0,0,0,.62); backdrop-filter: blur(6px); }
+  /* Native <dialog> centering: Tailwind v4's universal *{margin:0} reset kills the
+     UA stylesheet's margin:auto that centers showModal() dialogs. This rule only
+     restores centering + viewport fit; width caps stay with the max-w-* utilities
+     (unlayered rules would override those layered utilities, so none are set here). */
+  dialog {
+    margin: auto;
+    border: none;
+    background: transparent;
+    max-height: calc(100dvh - 2rem);
+  }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  @media (prefers-reduced-motion: reduce) {
+    .live-dot, .rise { animation: none; }
+    * { transition: none !important; }
+  }
+</style>
+{% block head %}{% endblock %}
+</head>
+<body class="antialiased min-h-[100dvh]">
+{% block body %}{% endblock %}
+<script>
+  lucide.createIcons();
+  function toggleTheme() {
+    var h = document.documentElement;
+    var next = h.dataset.theme === 'light' ? 'dark' : 'light';
+    h.dataset.theme = next;
+    try { localStorage.setItem('cd3-theme', next); } catch (e) {}
+    syncThemeIcon();
+  }
+  function syncThemeIcon() {
+    var light = document.documentElement.dataset.theme === 'light';
+    document.querySelectorAll('.icon-sun').forEach(function (el) { el.classList.toggle('hidden', !light); });
+    document.querySelectorAll('.icon-moon').forEach(function (el) { el.classList.toggle('hidden', light); });
+  }
+  syncThemeIcon();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

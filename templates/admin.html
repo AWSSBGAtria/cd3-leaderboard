@@ -1,0 +1,609 @@
+{% extends "base.html" %}
+{% block title %}Admin · CD3 Leaderboard Hub{% endblock %}
+{% block body %}
+<header class="sticky top-0 z-40 border-b" style="border-color:var(--border);background:var(--header-bg);backdrop-filter:blur(14px);">
+  <div class="max-w-[1200px] mx-auto px-4 pt-3 pb-2.5 flex items-center gap-2.5 flex-wrap">
+    <div class="tile w-9 h-9 rounded-[10px] grid place-items-center shrink-0">
+      <i data-lucide="shield-check" class="w-[18px] h-[18px]"></i>
+    </div>
+    <p class="display font-bold tracking-tight text-[15px]">CD3<span class="accent">/admin</span></p>
+    <div class="flex-1"></div>
+    <button onclick="openRegAdmin()" class="btn-p mono rounded-full px-4 py-2 text-[12px] font-semibold flex items-center gap-1.5">
+      <i data-lucide="user-plus" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">new registration</span><span class="sm:hidden">new</span>
+    </button>
+    <button onclick="toggleTheme()" title="Toggle light / dark" aria-label="Toggle light and dark theme" class="btn-g rounded-full p-2">
+      <span class="icon-sun hidden"><i data-lucide="sun" class="w-4 h-4"></i></span>
+      <span class="icon-moon"><i data-lucide="moon" class="w-4 h-4"></i></span>
+    </button>
+    <a href="/" title="Open viewer" aria-label="Open viewer" class="btn-g rounded-full p-2"><i data-lucide="eye" class="w-4 h-4"></i></a>
+    <a href="/admin/logout" title="Lock admin" aria-label="Lock admin" class="btn-g rounded-full p-2"><i data-lucide="log-out" class="w-4 h-4"></i></a>
+  </div>
+  <div class="max-w-[1200px] mx-auto px-4 pb-3 flex gap-1.5">
+    <button data-tab="events" onclick="switchTab('events')" class="tabbtn on mono rounded-full px-4 py-1.5 text-[12px] flex items-center gap-1.5"><i data-lucide="flag" class="w-3.5 h-3.5"></i>events</button>
+    <button data-tab="standings" onclick="switchTab('standings')" class="tabbtn mono rounded-full px-4 py-1.5 text-[12px] flex items-center gap-1.5"><i data-lucide="trophy" class="w-3.5 h-3.5"></i>standings</button>
+    <button data-tab="entries" onclick="switchTab('entries')" class="tabbtn mono rounded-full px-4 py-1.5 text-[12px] flex items-center gap-1.5"><i data-lucide="list" class="w-3.5 h-3.5"></i>entries</button>
+    <button data-tab="history" onclick="switchTab('history')" class="tabbtn mono rounded-full px-4 py-1.5 text-[12px] flex items-center gap-1.5"><i data-lucide="history" class="w-3.5 h-3.5"></i>history</button>
+    <button data-tab="settings" onclick="switchTab('settings')" class="tabbtn mono rounded-full px-4 py-1.5 text-[12px] flex items-center gap-1.5"><i data-lucide="settings" class="w-3.5 h-3.5"></i>settings</button>
+  </div>
+</header>
+
+<main class="max-w-[1200px] mx-auto px-4 py-6 pb-20">
+  <!-- EVENTS -->
+  <section id="tab-events">
+    <div class="flex flex-wrap items-center gap-2.5 mb-4">
+      <div>
+        <h2 class="display font-bold text-xl">Events</h2>
+        <p id="evCount" class="mono text-[11px] faint mt-0.5"></p>
+      </div>
+      <div class="flex-1"></div>
+      <button onclick="seedDemo()" class="btn-g mono rounded-full px-4 py-2 text-[12px] flex items-center gap-1.5"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i>seed demo</button>
+      <button onclick="openEventModal()" class="btn-p mono rounded-full px-4 py-2 text-[12px] font-semibold flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>new event</button>
+    </div>
+    <div id="autoBanner" class="hidden mb-4 rounded-xl px-4 py-2.5 mono text-[12px] items-center gap-2 info-box">
+      <i data-lucide="timer" class="w-4 h-4 shrink-0 accent"></i><span></span>
+    </div>
+    <div id="eventGrid" class="grid md:grid-cols-2 gap-4"></div>
+  </section>
+
+  <!-- STANDINGS -->
+  <section id="tab-standings" class="hidden">
+    <div class="flex flex-wrap items-center gap-2.5 mb-4">
+      <div>
+        <h2 class="display font-bold text-xl">Standings</h2>
+        <p class="mono text-[11px] faint mt-0.5">ranked board with contact details, for calling winners</p>
+      </div>
+      <div class="flex-1"></div>
+      <select id="standFilter" onchange="loadStandings()" class="field mono rounded-full px-4 py-2 text-[12px]"></select>
+      <a id="standPdf" href="#" class="btn-g mono rounded-full px-4 py-2 text-[12px] flex items-center gap-1.5"><i data-lucide="file-text" class="w-3.5 h-3.5"></i>pdf</a>
+      <a id="standJson" href="#" class="btn-g mono rounded-full px-4 py-2 text-[12px] flex items-center gap-1.5"><i data-lucide="braces" class="w-3.5 h-3.5"></i>json</a>
+    </div>
+    <div id="winnersRow" class="grid sm:grid-cols-3 gap-3 mb-4"></div>
+    <div class="panel rounded-2xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <div id="standInner" class="min-w-[680px]">
+          <div id="standHead" class="grid mono text-[10px] uppercase faint px-4 py-2.5" style="letter-spacing:0.14em;"></div>
+          <div id="standRows"></div>
+        </div>
+      </div>
+      <p id="standInfo" class="mono text-[11px] faint px-4 py-3" style="border-top:1px solid var(--border-soft);"></p>
+    </div>
+  </section>
+
+  <!-- ENTRIES -->
+  <section id="tab-entries" class="hidden">
+    <div class="flex flex-wrap items-center gap-2.5 mb-4">
+      <div>
+        <h2 class="display font-bold text-xl">Entries</h2>
+        <p class="mono text-[11px] faint mt-0.5">latest scores, every board</p>
+      </div>
+      <div class="flex-1"></div>
+      <select id="entryFilter" onchange="loadEntries(1)" class="field mono rounded-full px-4 py-2 text-[12px]"><option value="">all events</option></select>
+    </div>
+    <div class="panel rounded-2xl overflow-hidden">
+      <div id="entryRows"></div>
+      <div class="p-3.5 flex items-center justify-between" style="border-top:1px solid var(--border-soft);">
+        <p id="entryInfo" class="mono text-[11px] faint"></p>
+        <div class="flex gap-1.5">
+          <button onclick="loadEntries(entryPage-1)" class="btn-g mono rounded-full px-3.5 py-1.5 text-[12px]">prev</button>
+          <button onclick="loadEntries(entryPage+1)" class="btn-g mono rounded-full px-3.5 py-1.5 text-[12px]">next</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="tab-history" class="hidden">
+    <div class="flex flex-wrap items-center gap-2.5 mb-4">
+      <div>
+        <h2 class="display font-bold text-xl">History</h2>
+        <p class="mono text-[11px] faint mt-0.5">every reset is archived first, nothing is lost</p>
+      </div>
+      <div class="flex-1"></div>
+      <select id="histFilter" onchange="loadHistory()" class="field mono rounded-full px-4 py-2 text-[12px]"><option value="">all events</option></select>
+    </div>
+    <div id="histList" class="flex flex-col gap-3"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="tab-settings" class="hidden">
+    <h2 class="display font-bold text-xl">Settings</h2>
+    <p class="mono text-[11px] faint mt-0.5 mb-4">auto reset, password, full exports</p>
+    <div class="grid lg:grid-cols-2 gap-4">
+      <div class="panel rounded-2xl p-5">
+        <h3 class="display font-semibold text-[15px] flex items-center gap-2"><i data-lucide="timer" class="w-4 h-4 accent"></i>Auto reset</h3>
+        <p class="text-[13px] dim mt-1 mb-4">Boards idle past the interval are archived to history and cleared.</p>
+        <label class="flex items-center gap-2.5 cursor-pointer text-sm font-medium">
+          <input id="setAuto" type="checkbox" class="w-4 h-4 accent-[#b45309]">
+          <span>Enable automatic reset</span>
+        </label>
+        <label for="setHours" class="mono block text-[10.5px] uppercase tracking-[0.14em] faint mt-4 mb-1.5">Reset every (hours)</label>
+        <input id="setHours" type="number" min="0.25" max="168" step="0.25" class="field mono w-full rounded-xl px-3.5 py-2.5 text-[13px]">
+        <button onclick="saveSettings()" class="btn-p mono rounded-full px-5 py-2 text-[12px] font-semibold mt-4 flex items-center gap-1.5"><i data-lucide="save" class="w-3.5 h-3.5"></i>save</button>
+      </div>
+      <div class="panel rounded-2xl p-5">
+        <h3 class="display font-semibold text-[15px] flex items-center gap-2"><i data-lucide="key-round" class="w-4 h-4 accent"></i>Password</h3>
+        <p class="text-[13px] dim mt-1 mb-4">Guards the whole console.</p>
+        <label for="setPw" class="mono block text-[10.5px] uppercase tracking-[0.14em] faint mb-1.5">New password</label>
+        <input id="setPw" type="password" placeholder="min 4 characters" class="field w-full rounded-xl px-3.5 py-2.5 text-[13px]">
+        <div class="flex gap-2 mt-4 flex-wrap">
+          <button onclick="saveSettings()" class="btn-g mono rounded-full px-5 py-2 text-[12px]">update password</button>
+          <a href="/export/pdf" class="btn-g mono rounded-full px-4 py-2 text-[12px] flex items-center gap-1.5"><i data-lucide="file-text" class="w-3.5 h-3.5"></i>full pdf</a>
+          <a href="/export/json" class="btn-g mono rounded-full px-4 py-2 text-[12px] flex items-center gap-1.5"><i data-lucide="braces" class="w-3.5 h-3.5"></i>full json</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- EVENT MODAL -->
+<dialog id="eventModal" class="bg-transparent p-4 w-[calc(100%-2rem)] max-w-lg">
+  <div class="panel rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style="background:var(--surface);">
+    <div class="flex items-center gap-2">
+      <h2 id="evModalTitle" class="display font-bold text-lg">New event</h2>
+      <button onclick="document.getElementById('eventModal').close()" aria-label="Close" class="ml-auto btn-g rounded-full p-1.5"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+    <p class="text-[13px] dim mt-0.5">Name it, pick an icon, define the scoring.</p>
+    <label for="fName" class="mono block text-[10.5px] uppercase tracking-[0.14em] faint mt-5 mb-1.5">Event name</label>
+    <input id="fName" placeholder="Speed Coding Sprint" class="field w-full rounded-xl px-3.5 py-2.5 text-[13px]">
+    <label class="mono block text-[10.5px] uppercase tracking-[0.14em] faint mt-4 mb-1.5">Icon <span class="normal-case tracking-normal">(lucide svg)</span></label>
+    <div class="flex items-center gap-2 mb-2">
+      <div id="iconPreview" class="tile w-10 h-10 rounded-[10px] grid place-items-center shrink-0"><i data-lucide="trophy" class="w-[18px] h-[18px]"></i></div>
+      <input id="iconSearch" oninput="renderIcons()" placeholder="search icons" class="field mono flex-1 rounded-xl px-3.5 py-2 text-[12.5px]">
+    </div>
+    <div id="iconGrid" class="grid grid-cols-8 gap-1.5 max-h-40 overflow-y-auto p-0.5"></div>
+    <div class="flex items-center gap-2 mt-4 mb-1.5">
+      <span class="mono text-[10.5px] uppercase tracking-[0.14em] faint">Metrics <span class="normal-case tracking-normal">(ranked in list order)</span></span>
+      <div class="flex-1"></div>
+      <button id="metricAddBtn" onclick="metricAdd()" class="btn-g mono rounded-full px-3 py-1 text-[11px] flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i>add</button>
+    </div>
+    <div id="metricList" class="flex flex-col gap-2"></div>
+    <label for="fDesc" class="mono block text-[10.5px] uppercase tracking-[0.14em] faint mt-4 mb-1.5">Description <span class="normal-case tracking-normal">(optional)</span></label>
+    <input id="fDesc" placeholder="One line shown on the board" class="field w-full rounded-xl px-3.5 py-2.5 text-[13px]">
+    <p id="evErr" class="err hidden text-[13px] mt-3" role="alert"></p>
+    <button onclick="saveEvent()" class="btn-p mono w-full rounded-xl py-3 text-[12.5px] font-semibold mt-5 flex items-center justify-center gap-1.5"><i data-lucide="check" class="w-4 h-4"></i><span id="evSaveLabel">create event</span></button>
+  </div>
+</dialog>
+
+<!-- RESET CONFIRM -->
+<dialog id="resetModal" class="bg-transparent p-4 w-[calc(100%-2rem)] max-w-md">
+  <div class="panel rounded-2xl p-6" style="background:var(--surface);">
+    <div class="tile w-11 h-11 rounded-xl grid place-items-center mb-3" style="background:var(--danger-soft);color:var(--danger);border-color:var(--border);"><i data-lucide="rotate-ccw" class="w-5 h-5"></i></div>
+    <h2 class="display font-bold text-lg">Reset this board?</h2>
+    <p id="resetText" class="text-[13px] dim mt-1.5"></p>
+    <div class="rounded-xl px-3.5 py-3 mono text-[12px] mt-3 info-box flex gap-2">
+      <i data-lucide="info" class="w-4 h-4 shrink-0 accent mt-px"></i>
+      <span>Scores are archived to history first. Export a pdf copy below before clearing.</span>
+    </div>
+    <div class="grid grid-cols-2 gap-2 mt-3">
+      <button id="resetPdfBtn" class="btn-g mono rounded-xl py-2.5 text-[12px] flex items-center justify-center gap-1.5"><i data-lucide="file-text" class="w-3.5 h-3.5"></i>pdf first</button>
+      <button id="resetJsonBtn" class="btn-g mono rounded-xl py-2.5 text-[12px] flex items-center justify-center gap-1.5"><i data-lucide="braces" class="w-3.5 h-3.5"></i>json first</button>
+    </div>
+    <div class="flex gap-2 mt-2.5">
+      <button onclick="document.getElementById('resetModal').close()" class="btn-g mono flex-1 rounded-xl py-2.5 text-[12px]">cancel</button>
+      <button id="resetConfirm" class="btn-danger mono flex-1 rounded-xl py-2.5 text-[12px] font-semibold">archive + reset</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- HISTORY VIEWER -->
+<dialog id="histModal" class="bg-transparent p-4 w-[calc(100%-2rem)] max-w-lg">
+  <div class="panel rounded-2xl p-6 max-h-[85vh] overflow-y-auto" style="background:var(--surface);">
+    <div class="flex items-center gap-2">
+      <h2 id="histTitle" class="display font-bold text-[16px]"></h2>
+      <button onclick="document.getElementById('histModal').close()" aria-label="Close" class="ml-auto btn-g rounded-full p-1.5"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+    <div id="histBody" class="mt-3"></div>
+  </div>
+</dialog>
+
+<!-- REGISTRATION MODAL -->
+<dialog id="regModal" class="bg-transparent p-4 w-[calc(100%-2rem)] max-w-md">
+  <div class="panel rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style="background:var(--surface);">
+    <div class="flex items-start gap-2.5">
+      <div class="tile w-10 h-10 rounded-[10px] grid place-items-center shrink-0"><i data-lucide="user-plus" class="w-[18px] h-[18px]"></i></div>
+      <div>
+        <h2 class="display font-bold text-lg leading-tight">New registration</h2>
+        <p class="text-[13px] dim">Log a score right after an event finishes.</p>
+      </div>
+      <button onclick="document.getElementById('regModal').close()" aria-label="Close" class="ml-auto btn-g rounded-full p-1.5"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+    <div id="regForm">
+      <label for="regEvent" class="mono block text-[10.5px] uppercase tracking-[0.14em] faint mt-5 mb-1.5">Event</label>
+      <select id="regEvent" onchange="onRegEvent()" class="field w-full rounded-xl px-3.5 py-2.5 text-[13px]"></select>
+      <p id="regMetricHint" class="mono text-[11px] accent mt-2 flex items-center gap-1.5"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i><span></span></p>
+      <label for="regName" class="mono block text-[10.5px] uppercase tracking-[0.14em] faint mt-4 mb-1.5">Name</label>
+      <input id="regName" maxlength="60" placeholder="Aarav Sharma" class="field w-full rounded-xl px-3.5 py-2.5 text-[13px]">
+      <div class="grid grid-cols-2 gap-2.5 mt-3">
+        <div>
+          <label for="regUsn" class="mono block text-[10.5px] uppercase tracking-[0.14em] faint mb-1.5">USN</label>
+          <input id="regUsn" maxlength="30" placeholder="1AT23CS001" class="field mono w-full rounded-xl px-3.5 py-2.5 text-[13px]">
+        </div>
+        <div>
+          <label for="regPhone" class="mono block text-[10.5px] uppercase tracking-[0.14em] faint mb-1.5">Phone number</label>
+          <input id="regPhone" maxlength="20" inputmode="tel" placeholder="98765 43210" class="field mono w-full rounded-xl px-3.5 py-2.5 text-[13px]">
+        </div>
+      </div>
+      <label class="mono block text-[10.5px] uppercase tracking-[0.14em] faint mt-3 mb-1.5">Scores</label>
+      <div id="regScoreFields" class="flex flex-col gap-2"></div>
+      <p id="regErr" class="err hidden text-[13px] mt-2.5" role="alert"></p>
+      <button onclick="submitReg()" id="regSubmit" class="btn-p mono w-full rounded-xl py-3 text-[12.5px] font-semibold mt-4 flex items-center justify-center gap-1.5"><i data-lucide="check" class="w-4 h-4"></i>submit score</button>
+    </div>
+    <div id="regDone" class="hidden text-center py-4">
+      <div class="w-12 h-12 rounded-full mx-auto grid place-items-center ok-box mb-3"><i data-lucide="check" class="w-5 h-5"></i></div>
+      <h3 class="display font-bold text-[16px]">Score logged</h3>
+      <p id="regDoneText" class="mono text-[12px] dim mt-1"></p>
+      <div class="flex gap-2 mt-4">
+        <button onclick="resetRegForm()" class="btn-g mono flex-1 rounded-xl py-2.5 text-[12px]">add another</button>
+        <button onclick="document.getElementById('regModal').close(); loadEvents(); loadEntries(entryPage);" class="btn-p mono flex-1 rounded-xl py-2.5 text-[12px] font-semibold">done</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<div id="toasts" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 items-end"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtScore = s => (s===undefined||s===null) ? '-' : (Number.isInteger(+s) ? (+s).toLocaleString('en-IN') : (+s).toFixed(1));
+const evMetrics = ev => (ev.metrics && ev.metrics.length ? ev.metrics : [{id:0,label:ev.score_label||'Score',unit:ev.unit||'pts',sort_dir:ev.sort_dir||'DESC'}]);
+const mval = (r, mid, fb) => { const v = r.values ? r.values[String(mid)] : undefined; return (v===undefined||v===null) ? (fb!==undefined?fb:r.score) : v; };
+const dirWord = d => d==='ASC' ? 'low wins' : 'high wins';
+const metaText = ev => evMetrics(ev).map(m=>`${m.label} · ${m.unit} · ${dirWord(m.sort_dir)}`).join(' + ');
+let EVENTS=[], editingId=null, pickedIcon='trophy', editingMetrics=[], entryPage=1, SNAPSHOTS=[];
+
+const ICON_LIST = ['trophy','medal','crown','target','zap','flame','star','gamepad-2','crosshair','swords','rocket','timer','gauge','flag','bike','dumbbell','brain','puzzle','code','terminal','music','camera','palette','bot','cpu','cloud','database','globe','lightbulb','sparkles','dices','car','plane','ship','mountain','waves','keyboard','mouse','headphones','mic','video','presentation','pen-tool','calculator','book-open','flask-conical','atom','leaf','circle-dot'];
+
+function toast(msg, icon='check'){ const el=document.createElement('div'); el.className='panel rounded-xl px-4 py-2.5 mono text-[12.5px] flex items-center gap-2'; el.innerHTML=`<i data-lucide="${icon}" class="w-4 h-4 accent"></i><span>${esc(msg)}</span>`; $('toasts').appendChild(el); lucide.createIcons(); setTimeout(()=>{el.style.opacity='0';el.style.transition='.4s';setTimeout(()=>el.remove(),400);},3000); }
+async function api(path, opts={}){ const r=await fetch(path,{headers:{'Content-Type':'application/json'},...opts}); if(r.status===401){location.href='/admin/login';throw 0;} return r.json(); }
+
+function switchTab(t){
+  for (const k of ['events','standings','entries','history','settings']){ $('tab-'+k).classList.toggle('hidden', k!==t); }
+  document.querySelectorAll('.tabbtn').forEach(b=>b.classList.toggle('on', b.dataset.tab===t));
+  if(t==='standings') loadStandings();
+  if(t==='entries') loadEntries(1);
+  if(t==='history') loadHistory();
+  if(t==='settings') loadSettings();
+  lucide.createIcons();
+}
+
+// ── events ──
+async function loadEvents(){
+  const r = await api('/admin/api/events');
+  EVENTS = r.events || [];
+  $('evCount').textContent = `${EVENTS.length} events · ${EVENTS.reduce((a,e)=>a+(e.entry_count||0),0)} scores`;
+  const ab = $('autoBanner');
+  if (r.auto_reset?.enabled){ ab.classList.remove('hidden'); ab.classList.add('flex'); ab.querySelector('span').textContent = `auto reset on · boards idle ${r.auto_reset.hours}h are archived + cleared`; }
+  else { ab.classList.add('hidden'); ab.classList.remove('flex'); }
+  const ef = $('entryFilter'), hf = $('histFilter');
+  ef.innerHTML = `<option value="">all events</option>` + EVENTS.map(e=>`<option value="${e.id}">${esc(e.name.toLowerCase())}</option>`).join('');
+  hf.innerHTML = `<option value="">all events</option>` + EVENTS.map(e=>`<option value="${e.id}">${esc(e.name.toLowerCase())}</option>`).join('');
+  $('standFilter').innerHTML = EVENTS.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  $('regEvent').innerHTML = EVENTS.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  $('eventGrid').innerHTML = EVENTS.length ? EVENTS.map(ev=>`
+    <article class="panel panel-hover rounded-2xl p-4 flex flex-col">
+      <div class="flex items-center gap-3">
+        <div class="tile w-10 h-10 rounded-[10px] grid place-items-center shrink-0"><i data-lucide="${esc(ev.icon||'trophy')}" class="w-[18px] h-[18px]"></i></div>
+        <div class="min-w-0">
+          <h3 class="display font-semibold text-[15px] truncate">${esc(ev.name)}</h3>
+          <p class="mono text-[10.5px] faint mt-0.5 truncate">${esc(metaText(ev))}</p>
+        </div>
+        <span class="mono ml-auto text-[11px] px-2 py-0.5 rounded-full chip shrink-0">${ev.entry_count}</span>
+      </div>
+      ${ev.description?`<p class="text-[12.5px] dim mt-2.5">${esc(ev.description)}</p>`:''}
+      <div class="grid grid-cols-4 gap-1.5 mt-3.5">
+        <button onclick='editEvent(${ev.id})' title="Edit" class="btn-g mono rounded-lg py-2 text-[11px] flex items-center justify-center gap-1"><i data-lucide="pencil" class="w-3 h-3"></i>edit</button>
+        <a href="/export/pdf?event_id=${ev.id}" title="Export PDF" class="btn-g mono rounded-lg py-2 text-[11px] flex items-center justify-center gap-1"><i data-lucide="file-text" class="w-3 h-3"></i>pdf</a>
+        <a href="/export/json?event_id=${ev.id}" title="Export JSON" class="btn-g mono rounded-lg py-2 text-[11px] flex items-center justify-center gap-1"><i data-lucide="braces" class="w-3 h-3"></i>json</a>
+        <button onclick="askReset(${ev.id})" title="Archive and reset" class="btn-danger mono rounded-lg py-2 text-[11px] flex items-center justify-center gap-1"><i data-lucide="rotate-ccw" class="w-3 h-3"></i>reset</button>
+      </div>
+      <button onclick="deleteEvent(${ev.id})" class="mono mt-2.5 text-[10.5px] faint hover:underline flex items-center gap-1 mx-auto"><i data-lucide="trash-2" class="w-3 h-3"></i>delete event (archives first)</button>
+    </article>`).join('') :
+    `<div class="col-span-full panel rounded-2xl p-10 text-center text-[13px] faint flex flex-col items-center gap-2">
+      <i data-lucide="flag" class="w-6 h-6"></i>no events yet · create the first board</div>`;
+  lucide.createIcons();
+}
+
+// ── metrics editor (1–3 metrics, each with its own sort direction) ──
+function renderMetrics(){
+  const box = $('metricList');
+  $('metricAddBtn').style.display = editingMetrics.length >= 3 ? 'none' : '';
+  box.innerHTML = editingMetrics.map((m, i) => `
+    <div class="rounded-xl p-3" style="border:1px solid var(--border);background:var(--surface-2);">
+      <div class="flex items-center gap-1 mb-2">
+        <span class="mono text-[10px] faint">M${i+1}${i===0?' · primary sort':''}</span>
+        <div class="flex-1"></div>
+        <button onclick="metricMove(${i},-1)" ${i===0?'disabled':''} aria-label="Move up" class="btn-g rounded-lg p-1.5" style="${i===0?'opacity:.3':''}"><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button>
+        <button onclick="metricMove(${i},1)" ${i===editingMetrics.length-1?'disabled':''} aria-label="Move down" class="btn-g rounded-lg p-1.5" style="${i===editingMetrics.length-1?'opacity:.3':''}"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button>
+        <button onclick="metricDel(${i})" ${editingMetrics.length<=1?'disabled':''} aria-label="Remove metric" class="btn-g rounded-lg p-1.5" style="${editingMetrics.length<=1?'opacity:.3':''}"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <input value="${esc(m.label)}" oninput="metricField(${i},'label',this.value)" placeholder="Name" maxlength="30" aria-label="Metric name" class="field rounded-lg px-3 py-2 text-[12.5px]">
+        <input value="${esc(m.unit)}" oninput="metricField(${i},'unit',this.value)" placeholder="Unit" maxlength="15" aria-label="Metric unit" class="field mono rounded-lg px-3 py-2 text-[12.5px]">
+      </div>
+      <div class="grid grid-cols-2 gap-1.5 mt-2" role="group" aria-label="Sort direction">
+        <button onclick="metricSetDir(${i},'DESC')" class="mono rounded-lg px-2 py-2 text-[11px] border" style="${m.sort_dir!=='ASC'?'border-color:var(--accent);background:var(--accent-soft);color:var(--text);':'border-color:var(--border);color:var(--dim);'}border-width:1px;border-style:solid;">highest wins</button>
+        <button onclick="metricSetDir(${i},'ASC')" class="mono rounded-lg px-2 py-2 text-[11px] border" style="${m.sort_dir==='ASC'?'border-color:var(--accent);background:var(--accent-soft);color:var(--text);':'border-color:var(--border);color:var(--dim);'}border-width:1px;border-style:solid;">lowest wins</button>
+      </div>
+    </div>`).join('');
+  lucide.createIcons();
+}
+function metricField(i, f, v){ editingMetrics[i][f] = v; }
+function metricSetDir(i, d){ editingMetrics[i].sort_dir = d; renderMetrics(); }
+function metricMove(i, d){
+  const j = i + d;
+  if (j < 0 || j >= editingMetrics.length) return;
+  [editingMetrics[i], editingMetrics[j]] = [editingMetrics[j], editingMetrics[i]];
+  renderMetrics();
+}
+function metricDel(i){ if (editingMetrics.length > 1){ editingMetrics.splice(i, 1); renderMetrics(); } }
+function metricAdd(){ if (editingMetrics.length < 3){ editingMetrics.push({label:'', unit:'pts', sort_dir:'DESC'}); renderMetrics(); } }
+
+function renderIcons(){
+  const q = ($('iconSearch').value||'').toLowerCase();
+  $('iconGrid').innerHTML = ICON_LIST.filter(i=>i.includes(q)).map(i=>`
+    <button onclick="pickIcon('${i}')" title="${i}" aria-label="Icon ${i}" class="aspect-square rounded-lg grid place-items-center border ${i===pickedIcon?'':'dim'}" style="${i===pickedIcon?'border-color:var(--accent);background:var(--accent-soft);color:var(--accent);':'border-color:var(--border);'}">
+      <i data-lucide="${i}" class="w-4 h-4"></i>
+    </button>`).join('') || `<p class="col-span-8 mono text-[11px] faint text-center py-3">no match</p>`;
+  lucide.createIcons();
+}
+function pickIcon(i){ pickedIcon=i; $('iconPreview').innerHTML=`<i data-lucide="${i}" class="w-[18px] h-[18px]"></i>`; renderIcons(); }
+
+function openEventModal(){
+  editingId=null; pickedIcon='trophy';
+  editingMetrics=[{label:'Score', unit:'pts', sort_dir:'DESC'}];
+  $('evModalTitle').textContent='New event'; $('evSaveLabel').textContent='create event';
+  $('fName').value='';$('fDesc').value='';$('iconSearch').value='';
+  $('iconPreview').innerHTML=`<i data-lucide="trophy" class="w-[18px] h-[18px]"></i>`;
+  $('evErr').classList.add('hidden'); renderMetrics(); renderIcons();
+  $('eventModal').showModal(); lucide.createIcons();
+}
+function editEvent(id){
+  const ev = EVENTS.find(e=>e.id===id); if(!ev) return;
+  editingId=id; pickedIcon=ev.icon||'trophy';
+  editingMetrics=evMetrics(ev).map(m=>({id:m.id, label:m.label, unit:m.unit, sort_dir:m.sort_dir}));
+  $('evModalTitle').textContent='Edit event'; $('evSaveLabel').textContent='save changes';
+  $('fName').value=ev.name; $('fDesc').value=ev.description||'';
+  $('iconSearch').value=''; $('iconPreview').innerHTML=`<i data-lucide="${esc(pickedIcon)}" class="w-[18px] h-[18px]"></i>`;
+  renderMetrics(); renderIcons(); $('eventModal').showModal(); lucide.createIcons();
+}
+async function saveEvent(){
+  const err=$('evErr'); err.classList.add('hidden');
+  const metrics = editingMetrics.map(m=>({id:m.id, label:(m.label||'').trim(), unit:(m.unit||'').trim()||'pts', sort_dir:m.sort_dir}));
+  if (metrics.some(m=>!m.label)){ err.textContent='Every metric needs a name.'; err.classList.remove('hidden'); return; }
+  const body={name:$('fName').value.trim(),icon:pickedIcon,metrics,description:$('fDesc').value.trim()};
+  if(!body.name){err.textContent='Event name is required.';err.classList.remove('hidden');return;}
+  const r = editingId ? await api(`/admin/api/events/${editingId}`,{method:'PUT',body:JSON.stringify(body)})
+                      : await api('/admin/api/events',{method:'POST',body:JSON.stringify(body)});
+  if(!r.ok){err.textContent=r.error||'Save failed.';err.classList.remove('hidden');return;}
+  $('eventModal').close(); toast(editingId?'event updated':'event created','flag'); loadEvents();
+}
+async function deleteEvent(id){
+  const ev = EVENTS.find(e=>e.id===id);
+  if(!confirm(`Delete "${ev.name}"? Its ${ev.entry_count} scores are archived to history first.`)) return;
+  await api(`/admin/api/events/${id}?mode=archive`,{method:'DELETE'});
+  toast('event deleted · snapshot kept','trash-2'); loadEvents();
+}
+async function seedDemo(){
+  if(!confirm('Add 4 demo events with sample scores?')) return;
+  const r = await api('/admin/api/seed',{method:'POST'});
+  if(!r.ok){ toast(r.error||'Seed failed','alert-triangle'); return; }
+  toast('demo data added','sparkles'); loadEvents();
+}
+
+// ── reset ──
+let resetId=null;
+function askReset(id){
+  resetId=id; const ev=EVENTS.find(e=>e.id===id);
+  $('resetText').textContent=`${ev.name} holds ${ev.entry_count} scores. They are snapshotted to history, then the board returns to zero.`;
+  $('resetPdfBtn').onclick=()=>window.location=`/export/pdf?event_id=${id}`;
+  $('resetJsonBtn').onclick=()=>window.location=`/export/json?event_id=${id}`;
+  $('resetConfirm').onclick=doReset;
+  $('resetModal').showModal(); lucide.createIcons();
+}
+async function doReset(){
+  const r = await api(`/admin/api/events/${resetId}/reset`,{method:'POST',body:JSON.stringify({reason:'manual'})});
+  $('resetModal').close();
+  if(r.ok){ toast(`board reset · ${r.archived} archived`,'rotate-ccw'); loadEvents(); }
+}
+
+// ── standings (ranked board + contact details for calling winners) ──
+function phoneLink(phone){
+  if (!phone) return `<span class="faint">none</span>`;
+  const href = 'tel:' + phone.replace(/[\s-]/g, '');
+  return `<a href="${esc(href)}" class="accent hover:underline flex items-center gap-1.5"><i data-lucide="phone" class="w-3.5 h-3.5"></i>${esc(phone)}</a>`;
+}
+function winnerCard(r, rank, ev){
+  const medal = rank===1 ? 'rank-1' : rank===2 ? 'rank-2' : 'rank-3';
+  const ms = evMetrics(ev);
+  const sec = ms.slice(1).map(m=>`${mval(r,m.id)} ${m.unit}`).join(' · ');
+  return `
+    <div class="panel rounded-2xl p-4 ${rank===1?'gold-row':''}">
+      <div class="flex items-center gap-2.5">
+        <span class="${medal} w-8 h-8 rounded-full grid place-items-center mono font-bold text-[13px] shrink-0">${rank}</span>
+        <div class="min-w-0">
+          <p class="display font-semibold text-[14.5px] truncate">${esc(r.player_name)}</p>
+          <p class="mono text-[10.5px] faint">${esc(r.usn||'no usn')}</p>
+        </div>
+        <div class="ml-auto text-right shrink-0">
+          <p class="mono font-bold text-[15px] whitespace-nowrap ${rank===1?'accent':''}">${fmtScore(mval(r,ms[0].id))}<span class="text-[10px] font-medium faint"> ${esc(ms[0].unit)}</span></p>
+          ${sec?`<p class="mono text-[10px] faint whitespace-nowrap">${esc(sec)}</p>`:''}
+        </div>
+      </div>
+      <div class="mono text-[12.5px] mt-2.5 pt-2.5 flex items-center gap-2" style="border-top:1px solid var(--border-soft);">
+        <i data-lucide="phone-call" class="w-3.5 h-3.5 faint shrink-0"></i>${phoneLink(r.phone)}
+      </div>
+    </div>`;
+}
+async function loadStandings(){
+  const id = $('standFilter').value;
+  $('standPdf').href = `/export/pdf?event_id=${id}`;
+  $('standJson').href = `/export/json?event_id=${id}`;
+  if (!id){
+    $('winnersRow').innerHTML = '';
+    $('standRows').innerHTML = `<p class="text-center text-[13px] faint py-8">create an event first</p>`;
+    $('standInfo').textContent = '';
+    return;
+  }
+  const r = await api(`/api/leaderboard?event_id=${id}&page=1&per_page=500`);
+  if (!r.ok){ toast('board not found','alert-triangle'); return; }
+  const ev = r.event;
+  const ms = evMetrics(ev);
+  const cols = `2.5rem 1.4fr 1fr 1fr${' auto'.repeat(ms.length)}`;
+  $('standInner').style.minWidth = `${680 + (ms.length-1)*90}px`;
+  $('standHead').style.gridTemplateColumns = cols;
+  $('standHead').innerHTML = `<span>rk</span><span>player</span><span>usn</span><span>phone</span>` +
+    ms.map(m=>`<span class="text-right">${esc(m.label.toLowerCase())}</span>`).join('');
+  const rows = r.rows || [];
+  $('winnersRow').innerHTML = [0,1,2].map(i => rows[i] ? winnerCard(rows[i], i+1, ev) : `
+    <div class="panel rounded-2xl p-4 faint text-center">
+      <p class="mono text-[11px]">rank ${i+1} · vacant</p>
+    </div>`).join('');
+  const rest = rows.slice(3);
+  $('standRows').innerHTML = rest.length ? rest.map((row, k) => {
+    const i = k + 3;
+    return `
+    <div class="rowline grid items-center gap-2 px-4 py-2.5" style="grid-template-columns:${cols};">
+      <span class="mono text-[12px] font-bold faint">${String(i+1).padStart(2,'0')}</span>
+      <span class="min-w-0"><span class="text-[13px] font-medium block truncate">${esc(row.player_name)}</span>
+      <span class="mono text-[10px] faint">${new Date(row.created_at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})}</span></span>
+      <span class="mono text-[12px] dim truncate">${esc(row.usn||'no usn')}</span>
+      <span class="mono text-[12px]">${phoneLink(row.phone)}</span>
+      ${ms.map(m=>`<span class="mono font-bold text-[13.5px] text-right whitespace-nowrap">${fmtScore(mval(row,m.id))}<span class="text-[10px] font-medium faint"> ${esc(m.unit)}</span></span>`).join('')}
+    </div>`; }).join('')
+    : (rows.length === 0
+      ? `<p class="text-center text-[13px] faint py-8">no scores yet</p>`
+      : `<p class="mono text-[11px] faint text-center py-6">all ranks shown in the winners above</p>`);
+  $('standInfo').textContent = rows.length ? `${rows.length} ranked · ${ms.map(m=>`${m.sort_dir==='ASC'?'low':'high'} ${m.label.toLowerCase()}`).join(' · ')}` : '';
+  lucide.createIcons();
+}
+
+// ── entries ──
+async function loadEntries(p=1){
+  entryPage=Math.max(1,p);
+  const f=$('entryFilter').value;
+  const r = await api(`/admin/api/entries?page=${entryPage}&per_page=20${f?`&event_id=${f}`:''}`);
+  $('entryRows').innerHTML = r.rows.length ? r.rows.map(e=>{
+    const ev = EVENTS.find(x=>String(x.id)===String(e.event_id));
+    const ms = ev ? evMetrics(ev) : [{id:0,label:'Score',unit:'pts'}];
+    let vals = {}; try{ vals = JSON.parse(e.values_json||'{}'); }catch(_){}
+    const v = mid => { const x = vals[String(mid)]; return (x===undefined||x===null)?e.score:x; };
+    const sec = ms.length>1 ? `<p class="mono text-[10px] faint text-right">${esc(ms.slice(1).map(m=>`${v(m.id)} ${m.unit}`).join(' · '))}</p>` : '';
+    return `
+    <div class="rowline flex items-center gap-3 px-4 py-2.5">
+      <div class="min-w-0 flex-1">
+        <p class="text-[13.5px] font-medium truncate">${esc(e.player_name)}</p>
+        <p class="mono text-[10.5px] faint truncate mt-0.5">${esc((e.event_name||'').toLowerCase())} · ${esc(e.usn||'no usn')}${e.phone?` · ${esc(e.phone)}`:''}</p>
+      </div>
+      <div class="shrink-0">
+        <p class="mono font-bold text-[14px] text-right">${fmtScore(v(ms[0].id))} <span class="text-[10px] font-medium faint">${esc(ms[0].unit)}</span></p>
+        ${sec}
+      </div>
+      <button onclick="delEntry(${e.id})" aria-label="Delete entry" class="btn-g rounded-full p-1.5 faint"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+    </div>`;}).join('') : `<p class="text-center text-[13px] faint py-8">no entries</p>`;
+  $('entryInfo').textContent=`p${r.page}/${r.pages} · ${r.total} total`;
+  lucide.createIcons();
+}
+async function delEntry(id){ if(!confirm('Delete this entry?'))return; await api(`/admin/api/entries/${id}`,{method:'DELETE'}); loadEntries(entryPage); loadEvents(); }
+
+// ── history ──
+async function loadHistory(){
+  const f=$('histFilter').value;
+  const r = await api(`/admin/api/history${f?`?event_id=${f}`:''}`);
+  SNAPSHOTS=r.snapshots||[];
+  $('histList').innerHTML = SNAPSHOTS.length ? SNAPSHOTS.map(s=>`
+    <div class="panel rounded-2xl p-4">
+      <div class="flex flex-wrap items-center gap-2.5">
+        <div class="tile w-9 h-9 rounded-[10px] grid place-items-center shrink-0" style="background:var(--surface-2);color:var(--dim);"><i data-lucide="archive" class="w-4 h-4"></i></div>
+        <div class="min-w-0"><p class="display font-semibold text-[14.5px]">${esc(s.event_name)}</p>
+        <p class="mono text-[10.5px] faint">${esc((s.taken_at||'').replace('T',' '))} · ${esc(s.reason)} · ${s.entry_count} scores</p></div>
+        <div class="ml-auto flex gap-1.5 shrink-0 flex-wrap">
+          <button onclick="viewSnap(${s.id})" class="btn-g mono rounded-full px-3 py-1.5 text-[11px] flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i>view</button>
+          <a href="/admin/api/history/${s.id}/export/pdf" class="btn-g mono rounded-full px-3 py-1.5 text-[11px] flex items-center gap-1"><i data-lucide="file-text" class="w-3 h-3"></i>pdf</a>
+          <a href="/admin/api/history/${s.id}/export/json" class="btn-g mono rounded-full px-3 py-1.5 text-[11px] flex items-center gap-1"><i data-lucide="braces" class="w-3 h-3"></i>json</a>
+          <button onclick="delSnap(${s.id})" aria-label="Delete snapshot" class="btn-g rounded-full p-1.5 faint"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+        </div>
+      </div>
+    </div>`).join('') : `<div class="panel rounded-2xl p-10 text-center text-[13px] faint flex flex-col items-center gap-2"><i data-lucide="history" class="w-6 h-6"></i>no snapshots · resets land here</div>`;
+  lucide.createIcons();
+}
+function viewSnap(id){
+  const s=SNAPSHOTS.find(x=>x.id===id); if(!s)return;
+  const sms = (s.metrics && s.metrics.length ? s.metrics : [{id:0,label:'Score',unit:s.unit||'pts'}]);
+  const sval = (e, mid) => { const v = (e.values||{})[String(mid)]; return (v===undefined||v===null) ? (mid===0 ? e.score : '-') : v; };
+  $('histTitle').textContent=`${s.event_name} · ${s.entry_count}`;
+  $('histBody').innerHTML = s.entries.length ? s.entries.slice(0,50).map((e,i)=>`
+    <div class="rowline flex items-center gap-2.5 py-2">
+      <span class="mono text-[11px] faint w-7">#${i+1}</span>
+      <span class="flex-1 min-w-0"><span class="text-[13.5px] block truncate">${esc(e.player_name)}</span>${e.usn?`<span class="mono text-[10.5px] faint">${esc(e.usn)}${e.phone?` · ${esc(e.phone)}`:''}</span>`:''}</span>
+      <span class="text-right shrink-0"><span class="mono text-[13px] font-bold">${fmtScore(sval(e,sms[0].id))}<span class="text-[10px] font-medium faint"> ${esc(sms[0].unit)}</span></span>${sms.length>1?`<span class="mono text-[10px] faint block">${esc(sms.slice(1).map(m=>`${sval(e,m.id)} ${m.unit}`).join(' · '))}</span>`:''}</span>
+    </div>`).join('') + (s.entries.length>50?`<p class="mono text-[11px] faint mt-2">+${s.entries.length-50} more in pdf / json</p>`:'')
+    : `<p class="text-[13px] faint">Empty snapshot, the board had no scores.</p>`;
+  $('histModal').showModal();
+}
+async function delSnap(id){ if(!confirm('Delete this snapshot permanently?'))return; await api(`/admin/api/history/${id}`,{method:'DELETE'}); loadHistory(); }
+
+// ── settings ──
+async function loadSettings(){
+  const r = await api('/admin/api/settings');
+  $('setAuto').checked = !!r.auto_reset_enabled;
+  $('setHours').value = r.auto_reset_hours;
+}
+async function saveSettings(){
+  const body={auto_reset_enabled:$('setAuto').checked, auto_reset_hours:parseFloat($('setHours').value)||1};
+  if($('setPw').value) body.new_password=$('setPw').value;
+  const r = await api('/admin/api/settings',{method:'POST',body:JSON.stringify(body)});
+  if(!r.ok){toast(r.error||'Save failed','alert-triangle');return;}
+  $('setPw').value='';
+  toast('settings saved','settings'); loadEvents();
+}
+
+// ── registration ──
+function openRegAdmin(){
+  if (!EVENTS.length){ toast('create an event first','alert-triangle'); return; }
+  $('regForm').classList.remove('hidden'); $('regDone').classList.add('hidden');
+  $('regErr').classList.add('hidden');
+  onRegEvent();
+  $('regModal').showModal();
+}
+function onRegEvent(){
+  const ev = EVENTS.find(e=>String(e.id)===$('regEvent').value);
+  if(!ev) return;
+  const ms = evMetrics(ev);
+  $('regMetricHint').querySelector('span').textContent = ms.map((m,i)=>`${i===0?'ranked by':'then by'} ${m.label} (${m.unit}, ${m.sort_dir==='ASC'?'low':'high'} wins)`).join(' · ');
+  $('regScoreFields').innerHTML = ms.map(m=>`
+    <div class="flex items-center gap-2.5">
+      <label for="regScore_${m.id}" class="mono text-[11.5px] dim w-28 shrink-0 truncate">${esc(m.label)} <span class="faint">(${esc(m.unit)})</span></label>
+      <input id="regScore_${m.id}" type="number" step="any" placeholder="0" class="field mono flex-1 rounded-xl px-3.5 py-2.5 text-[13px]">
+    </div>`).join('');
+}
+function resetRegForm(){ $('regForm').classList.remove('hidden'); $('regDone').classList.add('hidden'); $('regName').value=''; $('regUsn').value=''; $('regPhone').value=''; onRegEvent(); }
+async function submitReg(){
+  const err = $('regErr'); err.classList.add('hidden');
+  const ev = EVENTS.find(e=>String(e.id)===$('regEvent').value);
+  if(!ev){ err.textContent='Pick an event.'; err.classList.remove('hidden'); return; }
+  const ms = evMetrics(ev);
+  const values = {};
+  for (const m of ms){
+    const v = parseFloat(($(`regScore_${m.id}`) || {}).value);
+    if (isNaN(v)){ err.textContent=`Enter a valid number for ${m.label}.`; err.classList.remove('hidden'); return; }
+    values[m.id] = v;
+  }
+  const body = { event_id:+$('regEvent').value, player_name:$('regName').value.trim(),
+                 usn:$('regUsn').value.trim(), phone:$('regPhone').value.trim(), values };
+  if (!body.player_name){ err.textContent='Name is required.'; err.classList.remove('hidden'); return; }
+  if (!body.usn){ err.textContent='USN is required.'; err.classList.remove('hidden'); return; }
+  const btn = $('regSubmit'); btn.disabled = true;
+  const r = await api('/api/register',{method:'POST',body:JSON.stringify(body)});
+  btn.disabled = false;
+  if (!r.ok){ err.textContent = r.error || 'Submit failed.'; err.classList.remove('hidden'); return; }
+  $('regForm').classList.add('hidden'); $('regDone').classList.remove('hidden');
+  $('regDoneText').textContent = `${body.player_name} · rank #${r.rank} · ${values[ms[0].id]} ${r.unit}`;
+  lucide.createIcons(); loadEvents();
+}
+
+loadEvents(); switchTab('events');
+</script>
+{% endblock %}
