@@ -39,12 +39,35 @@ Data persists in the `leaderboard-data` volume across rebuilds.
 3. **Start the app**:
    ```bash
    git clone <your-repo-url> && cd cd3-leaderboard
-   export SECRET_KEY=$(openssl rand -hex 32)
-   export ADMIN_PASSWORD=<pick-a-strong-password>
+   cp deploy/.env.example .env   # then fill in SECRET_KEY + ADMIN_PASSWORD
    docker compose up -d --build
    ```
 4. Open `http://<ec2-public-ip-or-dns>/`. Log in at `/admin` and change the
    password in Settings if you kept the default.
+
+## Custom domain + HTTPS (nginx + Let's Encrypt)
+
+`deploy/` holds the production front-end kit (mirrors the live EC2 setup):
+
+- `deploy/cd3.conf` — nginx reverse proxy (`cd3.awsatria.tech` → app on loopback)
+- `deploy/.env.example` — copy to `.env`; `APP_BIND=127.0.0.1 APP_PORT=5000`
+  keeps the app reachable only through nginx
+
+Steps on the instance:
+
+1. Point DNS at the server: `A cd3.awsatria.tech → <elastic-ip>`, open **443** in the security group.
+2. Install and wire nginx:
+   ```bash
+   sudo dnf install -y nginx
+   sudo cp deploy/cd3.conf /etc/nginx/conf.d/cd3.conf
+   sudo nginx -t && sudo systemctl enable --now nginx
+   ```
+3. Issue the certificate (needs DNS live first):
+   ```bash
+   sudo dnf install -y certbot python3-certbot-nginx
+   sudo certbot --nginx -d cd3.awsatria.tech
+   ```
+   Renewals are automatic via the certbot systemd timer.
 
 **Update later**: `git pull && docker compose up -d --build` (volume keeps the DB).
 **Back up the DB**: `docker run --rm -v cd3-leaderboard_leaderboard-data:/d -v "$PWD":/b alpine cp /d/leaderboard.db /b/backup.db`
