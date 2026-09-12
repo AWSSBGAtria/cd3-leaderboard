@@ -105,7 +105,7 @@ Lucide SVG icons only (no emojis anywhere, including PDF exports).
   view, export snapshot to PDF/JSON, delete
 - **Hourly auto-reset**: toggle + interval in hours (e.g. 1h). Stale boards are
   auto-archived + cleared on next request
-- Seed demo data (4 events × 12 scores) for testing
+- Demo seeding via a local-only script (`seed_admin.py`, kept out of git)
 
 ## Data
 

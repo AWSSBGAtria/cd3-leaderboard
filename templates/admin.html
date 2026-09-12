@@ -36,7 +36,6 @@
         <p id="evCount" class="mono text-[11px] faint mt-0.5"></p>
       </div>
       <div class="flex-1"></div>
-      <button onclick="seedDemo()" class="btn-g mono rounded-full px-4 py-2 text-[12px] flex items-center gap-1.5"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i>seed demo</button>
       <button onclick="openEventModal()" class="btn-p mono rounded-full px-4 py-2 text-[12px] font-semibold flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>new event</button>
     </div>
     <div id="autoBanner" class="hidden mb-4 rounded-xl px-4 py-2.5 mono text-[12px] items-center gap-2 info-box">
@@ -385,12 +384,6 @@ async function deleteEvent(id){
   if(!confirm(`Delete "${ev.name}"? Its ${ev.entry_count} scores are archived to history first.`)) return;
   await api(`/admin/api/events/${id}?mode=archive`,{method:'DELETE'});
   toast('event deleted · snapshot kept','trash-2'); loadEvents();
-}
-async function seedDemo(){
-  if(!confirm('Add 4 demo events with sample scores?')) return;
-  const r = await api('/admin/api/seed',{method:'POST'});
-  if(!r.ok){ toast(r.error||'Seed failed','alert-triangle'); return; }
-  toast('demo data added','sparkles'); loadEvents();
 }
 
 // ── reset ──
