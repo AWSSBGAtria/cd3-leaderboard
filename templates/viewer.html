@@ -1,9 +1,12 @@
 {% extends "base.html" %}
 {% block title %}CD3 Leaderboard Hub{% endblock %}
 {% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   .podium-bar-1 { background: var(--gold-row); border: 1px solid var(--border); border-bottom: none; }
   .podium-bar-n { background: var(--surface-2); border: 1px solid var(--border-soft); border-bottom: none; }
+  #qrBox { min-width: 200px; min-height: 200px; }
+  #qrBox img, #qrBox canvas { width: 200px; height: 200px; }
 </style>
 {% endblock %}
 {% block body %}
@@ -29,10 +32,13 @@
       <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 faint pointer-events-none"></i>
       <input id="searchInput" oninput="onSearch()" placeholder="search player" class="field mono w-full rounded-full pl-9 pr-4 py-2 text-[12.5px]">
     </div>
-    <button onclick="refresh(true)" title="Refresh boards" aria-label="Refresh boards" class="btn-g rounded-full p-2">
+    <button onclick="refresh(true)" title="Refresh boards" aria-label="Refresh boards" class="btn-g rounded-full p-2.5">
       <i data-lucide="refresh-cw" class="w-4 h-4"></i>
     </button>
-    <button onclick="toggleTheme()" title="Toggle light / dark" aria-label="Toggle light and dark theme" class="btn-g rounded-full p-2">
+    <button onclick="openQR()" title="Show QR code" aria-label="Show QR code for this board" class="btn-g rounded-full p-2.5">
+      <i data-lucide="qr-code" class="w-4 h-4"></i>
+    </button>
+    <button onclick="toggleTheme()" title="Toggle light / dark" aria-label="Toggle light and dark theme" class="btn-g rounded-full p-2.5">
       <span class="icon-sun hidden"><i data-lucide="sun" class="w-4 h-4"></i></span>
       <span class="icon-moon"><i data-lucide="moon" class="w-4 h-4"></i></span>
     </button>
@@ -42,7 +48,7 @@
 <main class="max-w-[1760px] mx-auto px-4 pb-20">
   <p id="boardHint" class="mono text-[11px] faint mt-5 tracking-wide"></p>
 
-  <section id="unifiedGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-3.5 mt-3"></section>
+  <section id="unifiedGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-3.5 mt-3"></section>
 
   <section id="singleView" class="hidden mt-3">
     <div class="panel rounded-2xl overflow-hidden">
@@ -73,7 +79,23 @@
   cd3 leaderboard hub <span class="mx-1">·</span> aws student builder group <span class="mx-1">·</span> refresh 15s
 </footer>
 
-<div id="toasts" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 items-end"></div>
+<div id="toasts" class="fixed z-50 flex flex-col gap-2 bottom-4 inset-x-4 sm:inset-x-auto sm:right-5 sm:bottom-5 sm:items-end"></div>
+
+<!-- QR SHARE -->
+<dialog id="qrModal" class="bg-transparent p-4 w-[calc(100%-2rem)] max-w-xs">
+  <div class="panel rounded-2xl p-5 sm:p-6 text-center" style="background:var(--surface);">
+    <div class="flex items-center gap-2 mb-1 text-left">
+      <h2 class="display font-bold text-[16px]">Open on your phone</h2>
+      <button onclick="document.getElementById('qrModal').close()" aria-label="Close" class="ml-auto btn-g rounded-full p-1.5"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+    <p class="mono text-[11px] faint mb-4 text-left">scan to open this board</p>
+    <div class="bg-white rounded-2xl p-4 inline-block">
+      <div id="qrBox" class="grid place-items-center overflow-hidden"></div>
+    </div>
+    <p id="qrUrl" class="mono text-[11px] dim mt-4 break-all"></p>
+    <button onclick="copyBoardLink()" class="btn-g mono rounded-full px-4 py-2 text-[12px] mt-3 inline-flex items-center gap-1.5"><i data-lucide="link" class="w-3.5 h-3.5"></i>copy link</button>
+  </div>
+</dialog>
 {% endblock %}
 
 {% block scripts %}
@@ -265,6 +287,31 @@ async function loadSingle(){
 function movePage(d){ const n = Math.min(curPages, Math.max(1, curPage+d)); if(n!==curPage){curPage=n; loadSingle();} }
 function gotoPage(p){ curPage=p; loadSingle(); }
 function onSearch(){ clearTimeout(searchT); searchT=setTimeout(()=>{curPage=1; loadSingle();},280); }
+
+// ── QR share ──
+function boardURL(){ return location.origin + location.pathname; }
+function openQR(){
+  const url = boardURL();
+  $('qrUrl').textContent = url;
+  const box = $('qrBox'); box.innerHTML = '';
+  if (window.QRCode){
+    new QRCode(box, { text: url, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+  } else {
+    box.innerHTML = '<p class="mono text-[11px] text-zinc-500 px-2">qr unavailable offline, use the link below</p>';
+  }
+  $('qrModal').showModal(); lucide.createIcons();
+}
+async function copyBoardLink(){
+  const url = boardURL();
+  try { await navigator.clipboard.writeText(url); toast('link copied', 'link'); }
+  catch(e){
+    const inp = document.createElement('input');
+    inp.value = url; document.body.appendChild(inp); inp.select();
+    try { document.execCommand('copy'); toast('link copied', 'link'); }
+    catch(_){ toast('copy failed, long-press the link', 'alert-triangle'); }
+    inp.remove();
+  }
+}
 
 refresh();
 setInterval(refresh, 15000);

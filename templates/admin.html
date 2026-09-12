@@ -11,14 +11,14 @@
     <button onclick="openRegAdmin()" class="btn-p mono rounded-full px-4 py-2 text-[12px] font-semibold flex items-center gap-1.5">
       <i data-lucide="user-plus" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">new registration</span><span class="sm:hidden">new</span>
     </button>
-    <button onclick="toggleTheme()" title="Toggle light / dark" aria-label="Toggle light and dark theme" class="btn-g rounded-full p-2">
+    <button onclick="toggleTheme()" title="Toggle light / dark" aria-label="Toggle light and dark theme" class="btn-g rounded-full p-2.5">
       <span class="icon-sun hidden"><i data-lucide="sun" class="w-4 h-4"></i></span>
       <span class="icon-moon"><i data-lucide="moon" class="w-4 h-4"></i></span>
     </button>
-    <a href="/" title="Open viewer" aria-label="Open viewer" class="btn-g rounded-full p-2"><i data-lucide="eye" class="w-4 h-4"></i></a>
-    <a href="/admin/logout" title="Lock admin" aria-label="Lock admin" class="btn-g rounded-full p-2"><i data-lucide="log-out" class="w-4 h-4"></i></a>
+    <a href="/" title="Open viewer" aria-label="Open viewer" class="btn-g rounded-full p-2.5"><i data-lucide="eye" class="w-4 h-4"></i></a>
+    <a href="/admin/logout" title="Lock admin" aria-label="Lock admin" class="btn-g rounded-full p-2.5"><i data-lucide="log-out" class="w-4 h-4"></i></a>
   </div>
-  <div class="max-w-[1200px] mx-auto px-4 pb-3 flex gap-1.5">
+  <div class="max-w-[1200px] mx-auto px-4 pb-3 flex gap-1.5 flex-wrap">
     <button data-tab="events" onclick="switchTab('events')" class="tabbtn on mono rounded-full px-4 py-1.5 text-[12px] flex items-center gap-1.5"><i data-lucide="flag" class="w-3.5 h-3.5"></i>events</button>
     <button data-tab="standings" onclick="switchTab('standings')" class="tabbtn mono rounded-full px-4 py-1.5 text-[12px] flex items-center gap-1.5"><i data-lucide="trophy" class="w-3.5 h-3.5"></i>standings</button>
     <button data-tab="entries" onclick="switchTab('entries')" class="tabbtn mono rounded-full px-4 py-1.5 text-[12px] flex items-center gap-1.5"><i data-lucide="list" class="w-3.5 h-3.5"></i>entries</button>
@@ -42,7 +42,7 @@
     <div id="autoBanner" class="hidden mb-4 rounded-xl px-4 py-2.5 mono text-[12px] items-center gap-2 info-box">
       <i data-lucide="timer" class="w-4 h-4 shrink-0 accent"></i><span></span>
     </div>
-    <div id="eventGrid" class="grid md:grid-cols-2 gap-4"></div>
+    <div id="eventGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
   </section>
 
   <!-- STANDINGS -->
@@ -57,7 +57,7 @@
       <a id="standPdf" href="#" class="btn-g mono rounded-full px-4 py-2 text-[12px] flex items-center gap-1.5"><i data-lucide="file-text" class="w-3.5 h-3.5"></i>pdf</a>
       <a id="standJson" href="#" class="btn-g mono rounded-full px-4 py-2 text-[12px] flex items-center gap-1.5"><i data-lucide="braces" class="w-3.5 h-3.5"></i>json</a>
     </div>
-    <div id="winnersRow" class="grid sm:grid-cols-3 gap-3 mb-4"></div>
+    <div id="winnersRow" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4"></div>
     <div class="panel rounded-2xl overflow-hidden">
       <div class="overflow-x-auto">
         <div id="standInner" class="min-w-[680px]">
@@ -108,7 +108,7 @@
   <section id="tab-settings" class="hidden">
     <h2 class="display font-bold text-xl">Settings</h2>
     <p class="mono text-[11px] faint mt-0.5 mb-4">auto reset, password, full exports</p>
-    <div class="grid lg:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div class="panel rounded-2xl p-5">
         <h3 class="display font-semibold text-[15px] flex items-center gap-2"><i data-lucide="timer" class="w-4 h-4 accent"></i>Auto reset</h3>
         <p class="text-[13px] dim mt-1 mb-4">Boards idle past the interval are archived to history and cleared.</p>
@@ -137,7 +137,7 @@
 
 <!-- EVENT MODAL -->
 <dialog id="eventModal" class="bg-transparent p-4 w-[calc(100%-2rem)] max-w-lg">
-  <div class="panel rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style="background:var(--surface);">
+  <div class="panel rounded-2xl p-5 sm:p-6 max-h-[90vh] overflow-y-auto" style="background:var(--surface);">
     <div class="flex items-center gap-2">
       <h2 id="evModalTitle" class="display font-bold text-lg">New event</h2>
       <button onclick="document.getElementById('eventModal').close()" aria-label="Close" class="ml-auto btn-g rounded-full p-1.5"><i data-lucide="x" class="w-4 h-4"></i></button>
@@ -150,7 +150,7 @@
       <div id="iconPreview" class="tile w-10 h-10 rounded-[10px] grid place-items-center shrink-0"><i data-lucide="trophy" class="w-[18px] h-[18px]"></i></div>
       <input id="iconSearch" oninput="renderIcons()" placeholder="search icons" class="field mono flex-1 rounded-xl px-3.5 py-2 text-[12.5px]">
     </div>
-    <div id="iconGrid" class="grid grid-cols-8 gap-1.5 max-h-40 overflow-y-auto p-0.5"></div>
+    <div id="iconGrid" class="grid grid-cols-6 sm:grid-cols-8 gap-1.5 max-h-40 overflow-y-auto p-0.5"></div>
     <div class="flex items-center gap-2 mt-4 mb-1.5">
       <span class="mono text-[10.5px] uppercase tracking-[0.14em] faint">Metrics <span class="normal-case tracking-normal">(ranked in list order)</span></span>
       <div class="flex-1"></div>
@@ -166,7 +166,7 @@
 
 <!-- RESET CONFIRM -->
 <dialog id="resetModal" class="bg-transparent p-4 w-[calc(100%-2rem)] max-w-md">
-  <div class="panel rounded-2xl p-6" style="background:var(--surface);">
+  <div class="panel rounded-2xl p-5 sm:p-6" style="background:var(--surface);">
     <div class="tile w-11 h-11 rounded-xl grid place-items-center mb-3" style="background:var(--danger-soft);color:var(--danger);border-color:var(--border);"><i data-lucide="rotate-ccw" class="w-5 h-5"></i></div>
     <h2 class="display font-bold text-lg">Reset this board?</h2>
     <p id="resetText" class="text-[13px] dim mt-1.5"></p>
@@ -187,7 +187,7 @@
 
 <!-- HISTORY VIEWER -->
 <dialog id="histModal" class="bg-transparent p-4 w-[calc(100%-2rem)] max-w-lg">
-  <div class="panel rounded-2xl p-6 max-h-[85vh] overflow-y-auto" style="background:var(--surface);">
+  <div class="panel rounded-2xl p-5 sm:p-6 max-h-[85vh] overflow-y-auto" style="background:var(--surface);">
     <div class="flex items-center gap-2">
       <h2 id="histTitle" class="display font-bold text-[16px]"></h2>
       <button onclick="document.getElementById('histModal').close()" aria-label="Close" class="ml-auto btn-g rounded-full p-1.5"><i data-lucide="x" class="w-4 h-4"></i></button>
@@ -198,7 +198,7 @@
 
 <!-- REGISTRATION MODAL -->
 <dialog id="regModal" class="bg-transparent p-4 w-[calc(100%-2rem)] max-w-md">
-  <div class="panel rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style="background:var(--surface);">
+  <div class="panel rounded-2xl p-5 sm:p-6 max-h-[90vh] overflow-y-auto" style="background:var(--surface);">
     <div class="flex items-start gap-2.5">
       <div class="tile w-10 h-10 rounded-[10px] grid place-items-center shrink-0"><i data-lucide="user-plus" class="w-[18px] h-[18px]"></i></div>
       <div>
@@ -240,7 +240,7 @@
   </div>
 </dialog>
 
-<div id="toasts" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 items-end"></div>
+<div id="toasts" class="fixed z-50 flex flex-col gap-2 bottom-4 inset-x-4 sm:inset-x-auto sm:right-5 sm:bottom-5 sm:items-end"></div>
 {% endblock %}
 
 {% block scripts %}
@@ -283,7 +283,7 @@ async function loadEvents(){
   $('standFilter').innerHTML = EVENTS.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
   $('regEvent').innerHTML = EVENTS.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
   $('eventGrid').innerHTML = EVENTS.length ? EVENTS.map(ev=>`
-    <article class="panel panel-hover rounded-2xl p-4 flex flex-col">
+    <article class="panel panel-hover rounded-2xl p-4 flex flex-col min-w-0">
       <div class="flex items-center gap-3">
         <div class="tile w-10 h-10 rounded-[10px] grid place-items-center shrink-0"><i data-lucide="${esc(ev.icon||'trophy')}" class="w-[18px] h-[18px]"></i></div>
         <div class="min-w-0">

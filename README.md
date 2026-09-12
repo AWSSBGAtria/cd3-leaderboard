@@ -80,6 +80,8 @@ Steps on the instance:
 - Dropdown filter → single board with player search + pagination (10/page, numbered).
   Single boards open with a visual top-3 podium, then ranks 4+ as a table.
 - Refresh button. No admin links, no exports, no registration here.
+- QR share button: opens a scannable code for the board URL, plus copy-link,
+  so the crowd can follow along on their phones.
 - Light/dark theme switcher in the header (sun/moon icons). Choice persists
   in the browser; first visit follows the OS setting, defaulting to dark.
 
