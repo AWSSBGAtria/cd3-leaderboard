@@ -3,7 +3,7 @@ CD3 Leaderboard Hub — local-first multi-leaderboard manager.
 Stack: Flask + SQLite (stdlib) + ReportLab (PDF) + Tailwind CDN + Lucide SVG.
 Run:  python app.py   ->  http://127.0.0.1:5000
 """
-import sqlite3, json, os, time
+import sqlite3, json, os, re, time
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import (Flask, request, jsonify, session, redirect, url_for,
@@ -81,6 +81,16 @@ def init_db():
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS registrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+        usn_norm TEXT NOT NULL DEFAULT '',
+        phone_norm TEXT NOT NULL DEFAULT '',
+        player_name TEXT NOT NULL DEFAULT '',
+        first_seen TEXT NOT NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_reg_event_usn ON registrations(event_id, usn_norm);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_reg_event_phone ON registrations(event_id, phone_norm) WHERE phone_norm <> '';
     """)
     # lightweight migration for DBs created before usn/phone/values existed
     for _col in ("usn TEXT NOT NULL DEFAULT ''", "phone TEXT NOT NULL DEFAULT ''",
@@ -119,6 +129,7 @@ def init_db():
         pass
     db.execute("INSERT OR IGNORE INTO settings(key,value) VALUES('auto_reset_enabled','0')")
     db.execute("INSERT OR IGNORE INTO settings(key,value) VALUES('auto_reset_hours','1')")
+    backfill_registrations(db)
     cur = db.execute("SELECT value FROM settings WHERE key='admin_password_hash'")
     if not cur.fetchone():
         try:
@@ -143,6 +154,45 @@ def set_setting(key, value):
 
 def now_iso():
     return datetime.now().isoformat(timespec="seconds")
+
+def norm_usn(usn):
+    """Canonical USN: uppercase, whitespace removed."""
+    return re.sub(r"\s+", "", (usn or "").upper())
+
+def norm_phone(phone):
+    """Canonical phone: digits only."""
+    return re.sub(r"\D", "", phone or "")
+
+def backfill_registrations(db):
+    """Record every participant ever seen (live entries + archived snapshots)
+    so the one-entry-per-person rule survives resets and restarts."""
+    try:
+        for r in db.execute("SELECT event_id, player_name, usn, phone, created_at FROM entries").fetchall():
+            u, p = norm_usn(r["usn"]), norm_phone(r["phone"])
+            if not u and not p:
+                continue
+            db.execute("""INSERT OR IGNORE INTO registrations(event_id,usn_norm,phone_norm,player_name,first_seen)
+                          VALUES(?,?,?,?,?)""",
+                       (r["event_id"], u, p, r["player_name"] or "", r["created_at"] or now_iso()))
+        for s in db.execute("SELECT event_id, data_json, taken_at FROM snapshots").fetchall():
+            try:
+                data = json.loads(s["data_json"] or "[]")
+            except Exception:
+                continue
+            if not isinstance(data, list):
+                continue
+            for e in data:
+                if not isinstance(e, dict):
+                    continue
+                u, p = norm_usn(e.get("usn")), norm_phone(e.get("phone"))
+                if not u and not p:
+                    continue
+                db.execute("""INSERT OR IGNORE INTO registrations(event_id,usn_norm,phone_norm,player_name,first_seen)
+                              VALUES(?,?,?,?,?)""",
+                           (s["event_id"], u, p, e.get("player_name") or "", s["taken_at"]))
+        db.commit()
+    except sqlite3.OperationalError:
+        pass
 
 # ------------------------------------------------------- metrics helpers
 def get_metrics(db, ev):
@@ -455,9 +505,24 @@ def api_register():
             return jsonify({"ok": False, "error": f"Enter a valid number for {m['label']}."}), 400
         values[str(m["id"])] = v
     primary = values[str(metrics[0]["id"])]
+    # one entry per person per leaderboard, forever: USN or phone match blocks,
+    # even after resets (registry table outlives entries). Same person may join
+    # *other* events freely — the check is scoped to this event_id.
+    u_norm, p_norm = norm_usn(usn), norm_phone(phone)
+    dup = db.execute("""SELECT player_name FROM registrations
+                        WHERE event_id=? AND (usn_norm=? OR (? <> '' AND phone_norm=?))""",
+                     (event_id, u_norm, p_norm, p_norm)).fetchone()
+    if dup:
+        return jsonify({"ok": False, "error": f"{dup['player_name'] or 'This participant'} (USN {usn}) is already on this leaderboard — one entry per person."}), 409
     cur = db.execute("INSERT INTO entries(event_id,player_name,usn,phone,score,values_json,created_at) VALUES(?,?,?,?,?,?,?)",
                      (event_id, name, usn, phone, primary, json.dumps(values), now_iso()))
     new_id = cur.lastrowid
+    try:
+        db.execute("""INSERT INTO registrations(event_id,usn_norm,phone_norm,player_name,first_seen)
+                      VALUES(?,?,?,?,?)""", (event_id, u_norm, p_norm, name, now_iso()))
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return jsonify({"ok": False, "error": "This USN or phone number is already on this leaderboard — one entry per person."}), 409
     db.commit()
     rank = db.execute(f"""SELECT rnk FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY {order_sql(metrics)}) AS rnk
                         FROM entries WHERE event_id=?) WHERE id=?""", (event_id, new_id)).fetchone()
@@ -893,6 +958,9 @@ def admin_seed():
             db.execute("INSERT INTO entries(event_id,player_name,usn,phone,score,values_json,created_at) VALUES(?,?,?,?,?,?,?)",
                        (eid, f"{n} {random.choice(['S','K','M','R','P'])}.", usn, phone,
                         values[str(mids[0])], json.dumps(values), ts))
+            db.execute("""INSERT OR IGNORE INTO registrations(event_id,usn_norm,phone_norm,player_name,first_seen)
+                          VALUES(?,?,?,?,?)""",
+                       (eid, norm_usn(usn), norm_phone(phone), n, ts))
     db.commit()
     return jsonify({"ok": True})
 
